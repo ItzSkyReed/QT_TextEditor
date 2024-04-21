@@ -1,7 +1,5 @@
 #include "texteditor.h"
 #include "./ui_texteditor.h"
-#include "searchwidget.h"
-#include "replacewidget.h"
 #include <QClipboard>
 #include <QDateTime>
 #include <QFileDialog>
@@ -30,8 +28,6 @@ TextEditor::TextEditor(QWidget *parent)
     { // Устанавливаем интерфейс
         ui->setupUi(this);
     }
-
-    SearchWidget *searchWidget;
 
     setupActions(); // Вызов функции, которая устанавливает связь всех действий
     setupContextMenu(); // Вызов функции, которая настраивает контекстное меню
@@ -94,9 +90,9 @@ void TextEditor::setupActions() {
     connect(ui->infoAction, &QAction::triggered, this, &TextEditor::infoMessage);
 
     // Вкладка "Найти"
-    connect(ui->findStringAction, &QAction::triggered, this, &TextEditor::openSearchWidget);
+    connect(ui->findStringAction, &QAction::triggered, this, &TextEditor::searchString);
     connect(ui->gotoLineAction, &QAction::triggered, this, &TextEditor::gotoLine);
-    connect(ui->replaceStringAction, &QAction::triggered, this, &TextEditor::openReplaceWidget);
+    connect(ui->replaceStringAction, &QAction::triggered, this, &TextEditor::replaceString);
 
     ui->cancelAction->setShortcut(QKeyCombination(Qt::CTRL | Qt::Key_Z)); // Горячая клавиша для отмены (Ctrl + Z)
     ui->repeatAction->setShortcut(QKeyCombination(Qt::CTRL | Qt::Key_Y)); // Горячая клавиша для повтора (Ctrl + Y)
@@ -272,12 +268,36 @@ void TextEditor::infoMessage() {
     QMessageBox::information(this, tr("Текстовый редактор"), tr("Данный текстовый редактор позволяет что-то делать..."));
 }
 
-// Открытие и создание виджета поиска
-void TextEditor::openSearchWidget() {
-    // Создаем новый виджет поиска и передаем ему родительский виджет (this)
-    SearchWidget *searchWidget = new SearchWidget(this);
-    // Отображаем виджет поиска
-    searchWidget->show();
+// Открытие и создание диалога поиска
+void TextEditor::searchString() {
+    bool ok; // Переменная для проверки успешности открытия диалогового окна
+
+    // Запрашиваем у пользователя строку для поиска с помощью диалогового окна
+    QString searchString = QInputDialog::getText(this, tr("Найти строку"), tr("Введите строку для поиска:"), QLineEdit::Normal, "", &ok);
+
+    // Проверяем, была ли нажата кнопка "ОК" и не пуста ли введенная строка
+    if (ok && !searchString.isEmpty()) {
+        // Ищем первое вхождение строки поиска
+
+        // Получаем доступ к документу редактора и создаем курсор для поиска
+        QTextDocument *document = ui->EditorField->document();
+        QTextCursor cursor(document);
+        cursor.beginEditBlock();
+
+        // Поиск первого вхождения строки поиска, начиная с текущей позиции курсора
+        QTextCursor findCursor = document->find(searchString, ui->EditorField->textCursor().position());
+
+        // Проверяем, была ли найдена строка
+        if (!findCursor.isNull()) {
+            // Если строка найдена, перемещаем курсор к найденной позиции
+            ui->EditorField->setTextCursor(findCursor);
+        } else {
+            // Если строка не найдена, отображаем информационное сообщение
+            QMessageBox::information(this, tr("Поиск"), tr("Строка не найдена."));
+        }
+        // Завершаем блок редактирования
+        cursor.endEditBlock();
+    }
 }
 
 void TextEditor::gotoLine() {
@@ -296,11 +316,38 @@ void TextEditor::gotoLine() {
         editorField->setTextCursor(cursor); // Устанавливаем курсор в редакторе текста
     }
 }
+void TextEditor::replaceString() {
+    // Отображаем диалоговое окно для ввода строки поиска и замены
+    bool ok;
+    QString searchString = QInputDialog::getText(this, tr("Заменить строку"), tr("Введите строку которая будет заменена:"), QLineEdit::Normal, "", &ok);
 
-// Открытия и создание Виджета поиска
-void TextEditor::openReplaceWidget() {
-    // Создаем новый виджет поиска и передаем ему родительский виджет (this)
-    ReplaceWidget *replaceWidget = new ReplaceWidget(this);
-    // Отображаем виджет поиска
-    replaceWidget->show();
+    // Проверяем, была ли нажата кнопка "ОК" и не пуста ли введенная строка замены
+    if (ok && !searchString.isEmpty()) {
+        // Запрашиваем строку замены
+        QString replaceString = QInputDialog::getText(this, tr("Заменить строку"), tr("Введите строку на которую будет проведена замена:"), QLineEdit::Normal, "", &ok);
+
+        // Проверяем, была ли нажата кнопка "ОК" и не пуста ли введенная строка замены
+        if (ok && !replaceString.isEmpty()) {
+            // Ищем первое вхождение строки поиска
+
+            // Получаем доступ к документу редактора и создаем курсор для поиска
+            QTextDocument *document = ui->EditorField->document();
+            QTextCursor cursor(document);
+            cursor.beginEditBlock();
+
+            // Поиск первого вхождения строки поиска, начиная с текущей позиции курсора
+            QTextCursor findCursor = document->find(searchString, ui->EditorField->textCursor().position());
+
+            // Проверяем, была ли найдена строка
+            if (!findCursor.isNull()) {
+                // Если строка найдена, заменяем ее
+                findCursor.insertText(replaceString);
+            } else {
+                // Если строка не найдена, отображаем информационное сообщение
+                QMessageBox::information(this, tr("Поиск и замена"), tr("Строка не найдена."));
+            }
+            // Завершаем блок редактирования
+            cursor.endEditBlock();
+        }
+    }
 }

@@ -47,9 +47,9 @@ private slots:
 
     void infoMessage();
 
-    void openSearchWidget();
+    void searchString();
     void gotoLine();
-    void openReplaceWidget();
+    void replaceString();
 
     void showContextMenu(const QPoint &pos);
 };
